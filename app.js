@@ -4,15 +4,8 @@
 // No backend needed — deploy as Static Site
 // =========================================
 
-// ── Groq API Key — set via prompt or hardcode for testing ────
-// For production: use an environment variable injected at build time
-// OR store in localStorage so user enters it once
-let GROQ_API_KEY = localStorage.getItem("groq_api_key") || "";
-
-if (!GROQ_API_KEY) {
-  GROQ_API_KEY = prompt("Enter your Groq API Key (from console.groq.com):");
-  if (GROQ_API_KEY) localStorage.setItem("groq_api_key", GROQ_API_KEY);
-}
+// ── Groq API Key ──────────────────────────────────────────────
+const GROQ_API_KEY = "YOUR_GROQ_API_KEY_HERE"; // 🔁 Replace with your key from console.groq.com
 
 const inputText    = document.getElementById("inputText");
 const charCount    = document.getElementById("charCount");
@@ -66,12 +59,6 @@ async function analyze() {
   const text = inputText.value.trim();
   if (!text) { shake(inputText); return; }
 
-  if (!GROQ_API_KEY) {
-    GROQ_API_KEY = prompt("Enter your Groq API Key:");
-    if (GROQ_API_KEY) localStorage.setItem("groq_api_key", GROQ_API_KEY);
-    else return;
-  }
-
   analyzeBtn.disabled = true;
   resultCard.classList.add("hidden");
   loadingState.classList.remove("hidden");
@@ -109,11 +96,7 @@ Text: "${text.replace(/"/g, "'")}"`,
       }),
     });
 
-    if (res.status === 401) {
-      localStorage.removeItem("groq_api_key");
-      GROQ_API_KEY = "";
-      throw new Error("Invalid API key. Please refresh and try again.");
-    }
+    if (res.status === 401) throw new Error("Invalid API key. Check your GROQ_API_KEY in app.js");
 
     const data = await res.json();
     const raw   = data.choices[0].message.content.trim();
