@@ -1,12 +1,12 @@
 const express = require("express");
 const cors = require("cors");
-const Anthropic = require("@anthropic-ai/sdk");
+const Groq = require("groq-sdk");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // In-memory history (use a DB like MongoDB/Postgres in production)
 let analysisHistory = [];
@@ -18,29 +18,35 @@ app.post("/api/analyze", async (req, res) => {
   }
 
   try {
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 512,
+      temperature: 0.2,
       messages: [
         {
+          role: "system",
+          content: "You are a sentiment analysis engine. Always respond with ONLY a valid JSON object — no markdown, no backticks, no explanation.",
+        },
+        {
           role: "user",
-          content: `Analyze the sentiment of the following text. Return ONLY a valid JSON object (no markdown, no explanation) with these exact fields:
+          content: `Analyze the sentiment of the following text and return ONLY this JSON structure:
 {
   "sentiment": "positive" | "negative" | "neutral" | "mixed",
   "score": <number from -1.0 to 1.0>,
-  "confidence": <number from 0 to 100>,
-  "emotions": [<up to 4 dominant emotions as strings>],
-  "summary": "<one short sentence summary>",
-  "keywords": [<up to 5 key sentiment-bearing words>]
+  "confidence": <integer from 0 to 100>,
+  "emotions": [<up to 4 dominant emotions as short strings>],
+  "summary": "<one concise sentence describing the sentiment>",
+  "keywords": [<up to 5 key sentiment-bearing words from the text>]
 }
 
-Text: "${text}"`,
+Text: "${text.replace(/"/g, "'")}"`,
         },
       ],
     });
 
-    const raw = message.content[0].text.trim();
-    const result = JSON.parse(raw);
+    const raw = completion.choices[0].message.content.trim();
+    const clean = raw.replace(/```json|```/gi, "").trim();
+    const result = JSON.parse(clean);
 
     const entry = {
       id: Date.now(),
@@ -55,7 +61,7 @@ Text: "${text}"`,
     res.json(entry);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Analysis failed. Check your API key." });
+    res.status(500).json({ error: "Analysis failed. Check your GROQ_API_KEY." });
   }
 });
 
@@ -88,7 +94,7 @@ app.get("/api/stats", (req, res) => {
   });
 });
 
-app.get("/health", (req, res) => res.json({ status: "ok" }));
+app.get("/health", (req, res) => res.json({ status: "ok", provider: "Groq", model: "llama-3.3-70b-versatile" }));
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server on port ${PORT} — powered by Groq`));
