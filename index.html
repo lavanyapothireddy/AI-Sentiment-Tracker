@@ -29,7 +29,7 @@
     </nav>
     <div class="header-right">
       <span class="status-dot"></span>
-      <span class="status-text">Live</span>
+      <span class="status-text">Live · Groq</span>
     </div>
   </header>
 
@@ -37,18 +37,16 @@
     <!-- ANALYZE TAB -->
     <section class="tab active" id="tab-analyze">
       <div class="hero">
-        <p class="hero-eyebrow">Emotion Intelligence</p>
+        <p class="hero-eyebrow">Powered by Groq × Llama 3.3 70B</p>
         <h1 class="hero-title">Decode the <em>feeling</em><br/>behind every word</h1>
-        <p class="hero-sub">Powered by Claude AI — real-time sentiment, emotion detection & keyword extraction</p>
+        <p class="hero-sub">Real-time sentiment analysis, emotion detection & keyword extraction</p>
       </div>
 
       <div class="analyzer-card">
         <div class="input-wrapper">
           <label class="input-label">Enter text to analyze</label>
           <textarea id="inputText" class="text-input" placeholder="Paste a review, tweet, message, or any text..." rows="5" maxlength="2000"></textarea>
-          <div class="input-meta">
-            <span id="charCount">0</span> / 2000 characters
-          </div>
+          <div class="input-meta"><span id="charCount">0</span> / 2000 characters</div>
         </div>
         <div class="btn-row">
           <button id="analyzeBtn" class="btn-primary">
@@ -56,7 +54,7 @@
           </button>
           <button id="clearBtn" class="btn-ghost">Clear</button>
           <div class="sample-btns">
-            <span class="sample-label">Samples:</span>
+            <span class="sample-label">Try:</span>
             <button class="sample-pill" data-text="I absolutely love this product! It exceeded all my expectations and the customer service was phenomenal.">Positive</button>
             <button class="sample-pill" data-text="This is the worst experience I've ever had. The product broke after one day and support never responded.">Negative</button>
             <button class="sample-pill" data-text="The product arrived on time. It works as described. Nothing special but no complaints either.">Neutral</button>
@@ -67,7 +65,7 @@
 
       <div id="loadingState" class="loading-state hidden">
         <div class="pulse-ring"></div>
-        <p>Claude is reading the room...</p>
+        <p>Groq is reading the room...</p>
       </div>
 
       <div id="resultCard" class="result-card hidden">
@@ -82,16 +80,14 @@
             <span class="score-value" id="confidenceValue"></span>
           </div>
         </div>
-
         <div class="score-bar-wrap">
           <div class="score-bar-track">
             <div class="score-bar-fill" id="scoreBar"></div>
-            <div class="score-bar-labels">
-              <span>Negative</span><span>Neutral</span><span>Positive</span>
-            </div>
+          </div>
+          <div class="score-bar-labels">
+            <span>Negative</span><span>Neutral</span><span>Positive</span>
           </div>
         </div>
-
         <div class="result-grid">
           <div class="result-section">
             <h3 class="section-title">AI Summary</h3>
