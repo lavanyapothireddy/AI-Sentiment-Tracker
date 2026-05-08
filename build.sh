@@ -1,6 +1,5 @@
 #!/bin/bash
 # build.sh — Render build script
-# Reads GROQ_API_KEY from environment and injects it into app.js
 set -e
 
 echo "Building SentimentAI..."
@@ -14,7 +13,15 @@ fi
 
 echo "GROQ_API_KEY found — injecting into app..."
 
-# Replace the placeholder token __GROQ_API_KEY__ in frontend/app.js with the real key
+# Show file before replacement
+echo "Before sed:"
+grep "GROQ_API_KEY" frontend/app.js
+
+# Replace the placeholder
 sed -i "s|__GROQ_API_KEY__|$GROQ_API_KEY|g" frontend/app.js
+
+# Show file after replacement
+echo "After sed:"
+grep "GROQ_API_KEY" frontend/app.js
 
 echo "Build complete — key injected."
