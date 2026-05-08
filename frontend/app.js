@@ -63,10 +63,10 @@ async function analyze() {
   if (!text) { shake(inputText); return; }
 
   // Guard: if build script didn't run (local dev without key)
-  if (!GROQ_API_KEY || GROQ_API_KEY === "__GROQ_API_KEY__") {
+  if (!GROQ_API_KEY || GROQ_API_KEY === "") {
     showToast("⚠️ No API key configured. Set GROQ_API_KEY in Render environment and redeploy.");
     return;
-  }
+}
 
   analyzeBtn.disabled = true;
   resultCard.classList.add("hidden");
