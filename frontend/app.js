@@ -7,7 +7,7 @@
 // ── API Key (injected by build.sh at deploy time) ──
 // During build, __GROQ_API_KEY__ is replaced with the
 // real key from the Render environment variable.
-const GROQ_API_KEY = "YOUR_GROQ_API_KEY_HERE";
+const GROQ_API_KEY = "__GROQ_API_KEY__";
 
 // ── DOM Refs ───────────────────────────────────────
 const inputText    = document.getElementById("inputText");
