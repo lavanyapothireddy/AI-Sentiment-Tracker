@@ -14,7 +14,7 @@ fi
 
 echo "GROQ_API_KEY found — injecting into app..."
 
-# Replace the placeholder token __GROQ_API_KEY__ in app.js with the real key
-sed -i "s|__GROQ_API_KEY__|$GROQ_API_KEY|g" app.js
+# Replace the placeholder token __GROQ_API_KEY__ in frontend/app.js with the real key
+sed -i "s|__GROQ_API_KEY__|$GROQ_API_KEY|g" frontend/app.js
 
 echo "Build complete — key injected."
