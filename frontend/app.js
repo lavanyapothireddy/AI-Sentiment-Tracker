@@ -1,8 +1,13 @@
 // =====================================================
 // SENTIMENTAI — app.js
-// 100% Frontend. Calls Groq API from the browser.
-// API key stored in localStorage (never in code).
+// API key injected at build time via build.sh
+// No banner shown to users — key is pre-configured.
 // =====================================================
+
+// ── API Key (injected by build.sh at deploy time) ──
+// During build, __GROQ_API_KEY__ is replaced with the
+// real key from the Render environment variable.
+const GROQ_API_KEY = "__GROQ_API_KEY__";
 
 // ── DOM Refs ───────────────────────────────────────
 const inputText    = document.getElementById("inputText");
@@ -11,103 +16,6 @@ const analyzeBtn   = document.getElementById("analyzeBtn");
 const clearBtn     = document.getElementById("clearBtn");
 const loadingState = document.getElementById("loadingState");
 const resultCard   = document.getElementById("resultCard");
-
-// ── API Key helpers ────────────────────────────────
-const getApiKey  = () => localStorage.getItem("groq_api_key") || "";
-const saveApiKey = (k) => localStorage.setItem("groq_api_key", k.trim());
-
-// ── API Key Banner ─────────────────────────────────
-// Injects a sticky top banner so users paste their key.
-// Key is stored in localStorage — never hardcoded.
-function injectApiKeyBanner() {
-  const banner = document.createElement("div");
-  banner.id = "apiKeyBanner";
-  Object.assign(banner.style, {
-    position: "fixed", top: "0", left: "0", right: "0", zIndex: "9999",
-    background: "linear-gradient(135deg, #0a0c14, #131620)",
-    borderBottom: "1px solid rgba(255,255,255,0.07)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    gap: "12px", padding: "10px 20px", flexWrap: "wrap",
-  });
-
-  banner.innerHTML = `
-    <span style="color:#8b90a0;font-family:'Geist Mono',monospace;font-size:12px;white-space:nowrap">
-      🔑 Groq API Key
-    </span>
-    <input id="apiKeyInput" type="password"
-      placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx"
-      autocomplete="off"
-      style="
-        flex:1;max-width:360px;min-width:200px;
-        background:#1a1e2c;border:1px solid rgba(255,255,255,0.1);
-        border-radius:8px;padding:8px 14px;
-        color:#e8eaf0;font-family:'Geist Mono',monospace;font-size:12px;
-        outline:none;transition:border-color 0.2s,box-shadow 0.2s;
-      "
-    />
-    <button id="apiKeySaveBtn" style="
-      background:#6c6eff;border:none;border-radius:8px;
-      padding:8px 20px;color:#fff;
-      font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;
-      cursor:pointer;white-space:nowrap;transition:background 0.2s;
-    ">Save Key</button>
-    <a href="https://console.groq.com/keys" target="_blank" rel="noopener" style="
-      color:#9b8eff;font-size:12px;font-family:'Geist Mono',monospace;
-      text-decoration:none;white-space:nowrap;
-    ">Get free key ↗</a>
-  `;
-
-  document.body.prepend(banner);
-
-  // Push header down so banner doesn't overlap it
-  const header = document.querySelector(".header");
-  if (header) header.style.top = "48px";
-
-  const input   = document.getElementById("apiKeyInput");
-  const saveBtn = document.getElementById("apiKeySaveBtn");
-
-  // Pre-fill if already saved
-  const existing = getApiKey();
-  if (existing) { input.value = existing; markBannerSaved(saveBtn, input); }
-
-  // Focus styles
-  input.addEventListener("focus", () => {
-    input.style.borderColor = "#6c6eff";
-    input.style.boxShadow   = "0 0 0 3px rgba(108,110,255,0.2)";
-  });
-  input.addEventListener("blur", () => {
-    input.style.borderColor = "rgba(255,255,255,0.1)";
-    input.style.boxShadow   = "none";
-  });
-  input.addEventListener("keydown", e => { if (e.key === "Enter") saveBtn.click(); });
-
-  saveBtn.addEventListener("click", () => {
-    const key = input.value.trim();
-    if (!key) {
-      showToast("⚠️ Please paste your Groq API key first");
-      input.focus(); return;
-    }
-    if (!key.startsWith("gsk_")) {
-      showToast("❌ Invalid key format — Groq keys start with gsk_");
-      input.style.borderColor = "#ff5b6b"; return;
-    }
-    saveApiKey(key);
-    input.style.borderColor = "#22d3a0";
-    markBannerSaved(saveBtn, input);
-    showToast("✅ API key saved! Start analyzing text below.");
-  });
-}
-
-function markBannerSaved(btn, input) {
-  btn.textContent = "✓ Saved";
-  btn.style.background = "#22d3a0";
-  input.style.borderColor = "#22d3a0";
-  setTimeout(() => {
-    btn.textContent = "Save Key";
-    btn.style.background = "#6c6eff";
-    input.style.borderColor = "rgba(255,255,255,0.1)";
-  }, 2200);
-}
 
 // ── Tab navigation ─────────────────────────────────
 document.querySelectorAll(".nav-btn").forEach(btn => {
@@ -154,14 +62,12 @@ async function analyze() {
   const text = inputText.value.trim();
   if (!text) { shake(inputText); return; }
 
-  const key = getApiKey();
-  if (!key) {
-    showToast("⚠️ Please enter your Groq API key in the top banner");
-    document.getElementById("apiKeyInput")?.focus();
+  // Guard: if build script didn't run (local dev without key)
+  if (!GROQ_API_KEY || GROQ_API_KEY === "__GROQ_API_KEY__") {
+    showToast("⚠️ No API key configured. Set GROQ_API_KEY in Render environment and redeploy.");
     return;
   }
 
-  // UI: loading state
   analyzeBtn.disabled = true;
   resultCard.classList.add("hidden");
   loadingState.classList.remove("hidden");
@@ -171,7 +77,7 @@ async function analyze() {
       method: "POST",
       headers: {
         "Content-Type":  "application/json",
-        "Authorization": `Bearer ${key}`,
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
       },
       body: JSON.stringify({
         model:       "llama-3.3-70b-versatile",
@@ -184,17 +90,17 @@ async function analyze() {
           },
           {
             role: "user",
-            content: `Analyze the sentiment of the following text. Return ONLY this exact JSON structure:
+            content: `Analyze the sentiment of the following text. Return ONLY this exact JSON:
 {
   "sentiment": "positive" | "negative" | "neutral" | "mixed",
-  "score": <float from -1.0 (most negative) to +1.0 (most positive)>,
-  "confidence": <integer from 0 to 100>,
-  "emotions": [<up to 4 dominant emotion strings, e.g. "joy", "frustration">],
+  "score": <float -1.0 to +1.0>,
+  "confidence": <integer 0 to 100>,
+  "emotions": [<up to 4 dominant emotion strings>],
   "summary": "<one concise sentence describing the overall sentiment>",
   "keywords": [<up to 5 key sentiment-bearing words from the text>]
 }
 
-Text to analyze:
+Text:
 """
 ${text.replace(/"/g, "'")}
 """`,
@@ -203,19 +109,12 @@ ${text.replace(/"/g, "'")}
       }),
     });
 
-    // Handle auth errors — wipe bad key
     if (res.status === 401) {
-      localStorage.removeItem("groq_api_key");
-      const input = document.getElementById("apiKeyInput");
-      if (input) { input.value = ""; input.style.borderColor = "#ff5b6b"; }
-      throw new Error("Invalid API key — please re-enter a valid key in the banner above");
+      throw new Error("Invalid API key — update GROQ_API_KEY in Render and redeploy");
     }
-
-    // Handle rate limits
     if (res.status === 429) {
-      throw new Error("Rate limit hit — wait a moment and try again");
+      throw new Error("Rate limit hit — please wait a moment and try again");
     }
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err?.error?.message || `Groq API error ${res.status}`);
@@ -226,26 +125,22 @@ ${text.replace(/"/g, "'")}
     const clean  = raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
 
     let result;
-    try {
-      result = JSON.parse(clean);
-    } catch {
-      throw new Error("Could not parse AI response. Please try again.");
-    }
+    try { result = JSON.parse(clean); }
+    catch { throw new Error("Could not parse AI response — please try again"); }
 
-    // Validate required fields
     if (!result.sentiment || result.score === undefined) {
-      throw new Error("Incomplete response from AI. Please try again.");
+      throw new Error("Incomplete AI response — please try again");
     }
 
     const entry = {
       id:         Date.now(),
       text,
-      sentiment:  result.sentiment  || "neutral",
+      sentiment:  result.sentiment,
       score:      Number(result.score) || 0,
       confidence: Number(result.confidence) || 50,
-      emotions:   Array.isArray(result.emotions)  ? result.emotions  : [],
+      emotions:   Array.isArray(result.emotions) ? result.emotions : [],
       summary:    result.summary  || "",
-      keywords:   Array.isArray(result.keywords)  ? result.keywords  : [],
+      keywords:   Array.isArray(result.keywords) ? result.keywords : [],
       timestamp:  new Date().toISOString(),
     };
 
@@ -263,32 +158,30 @@ ${text.replace(/"/g, "'")}
 
 // ── Render result ──────────────────────────────────
 function renderResult(data) {
-  // Badge
   const badge = document.getElementById("sentimentBadge");
   badge.textContent = cap(data.sentiment);
   badge.className   = `sentiment-badge ${data.sentiment}`;
 
-  // Scores
   document.getElementById("scoreValue").textContent =
     (data.score >= 0 ? "+" : "") + Number(data.score).toFixed(2);
   document.getElementById("confidenceValue").textContent =
     data.confidence + "%";
 
-  // Score bar: map -1..1 → 0..100%
   const pct    = Math.round(((Number(data.score) + 1) / 2) * 100);
   const colors = { positive:"#22d3a0", negative:"#ff5b6b", neutral:"#8b90a0", mixed:"#f5a623" };
   const bar    = document.getElementById("scoreBar");
   bar.style.width      = pct + "%";
   bar.style.background = colors[data.sentiment] || "#6c6eff";
 
-  // Text fields
   document.getElementById("summaryText").textContent = data.summary || "—";
 
   document.getElementById("emotionTags").innerHTML =
-    (data.emotions || []).map(e => `<span class="emotion-tag">${escHtml(e)}</span>`).join("") || "<span style='color:var(--text3);font-size:13px'>None detected</span>";
+    (data.emotions || []).map(e => `<span class="emotion-tag">${escHtml(e)}</span>`).join("")
+    || `<span style="color:var(--text3);font-size:13px">None detected</span>`;
 
   document.getElementById("keywordTags").innerHTML =
-    (data.keywords || []).map(k => `<span class="keyword-tag">${escHtml(k)}</span>`).join("") || "<span style='color:var(--text3);font-size:13px'>None detected</span>";
+    (data.keywords || []).map(k => `<span class="keyword-tag">${escHtml(k)}</span>`).join("")
+    || `<span style="color:var(--text3);font-size:13px">None detected</span>`;
 
   resultCard.classList.remove("hidden");
   resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -313,11 +206,10 @@ function renderHistory() {
   const data  = getEntries();
   list.innerHTML = "";
   empty.classList.add("hidden");
-
   if (!data.length) { empty.classList.remove("hidden"); return; }
 
   data.forEach(item => {
-    const div   = document.createElement("div");
+    const div = document.createElement("div");
     div.className = "history-item";
     const score = fmtScore(item.score);
     const time  = new Date(item.timestamp).toLocaleString();
@@ -371,7 +263,6 @@ function renderStats() {
       <div class="stat-value">${total}</div>
       <div class="stat-sub">saved in your browser</div>
     </div>
-
     <div class="stat-card">
       <div class="stat-label">Average Score</div>
       <div class="stat-value" style="font-size:40px">${avgScore >= 0 ? "+" : ""}${avgScore}</div>
@@ -379,13 +270,11 @@ function renderStats() {
         ${avgScore >= 0 ? "Generally positive" : "Generally negative"}
       </div>
     </div>
-
     <div class="stat-card">
       <div class="stat-label">Dominant Sentiment</div>
       <div class="stat-value" style="font-size:30px;text-transform:capitalize;margin-top:6px;color:${colors[dominant]}">${dominant}</div>
       <div class="stat-sub">${counts[dominant]} of ${total} analyses</div>
     </div>
-
     <div class="stat-card">
       <div class="stat-label">AI Model</div>
       <div class="stat-value" style="font-size:15px;font-family:var(--font-mono);margin-top:6px;line-height:1.5">
@@ -393,7 +282,6 @@ function renderStats() {
       </div>
       <div class="stat-sub" style="color:var(--accent2);margin-top:4px">via Groq — ultra-fast inference</div>
     </div>
-
     <div class="stat-card wide">
       <div class="stat-label">Sentiment Breakdown</div>
       <div class="sentiment-bars" style="margin-top:18px">
@@ -421,46 +309,37 @@ function showToast(msg) {
   const t = document.createElement("div");
   t.id = "_toast";
   Object.assign(t.style, {
-    position: "fixed", bottom: "28px", right: "28px", zIndex: "99999",
-    background: "#141720", border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: "12px", padding: "14px 20px", maxWidth: "380px",
-    fontFamily: "'Geist Mono',monospace", fontSize: "13px", color: "#e8eaf0",
-    boxShadow: "0 10px 40px rgba(0,0,0,0.6)", lineHeight: "1.55",
-    animation: "fadeUp 0.3s ease",
+    position:"fixed", bottom:"28px", right:"28px", zIndex:"99999",
+    background:"#141720", border:"1px solid rgba(255,255,255,0.12)",
+    borderRadius:"12px", padding:"14px 20px", maxWidth:"380px",
+    fontFamily:"'Geist Mono',monospace", fontSize:"13px", color:"#e8eaf0",
+    boxShadow:"0 10px 40px rgba(0,0,0,0.6)", lineHeight:"1.55",
   });
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 5000);
 }
 
-// ── Shake animation ────────────────────────────────
+// ── Utils ──────────────────────────────────────────
 function shake(el) {
   el.style.animation = "none"; el.offsetHeight;
   el.style.animation = "shake 0.4s ease";
   el.addEventListener("animationend", () => (el.style.animation = ""), { once: true });
 }
-
-// ── Helpers ────────────────────────────────────────
-const cap     = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+const cap      = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 const fmtScore = s => (Number(s) >= 0 ? "+" : "") + Number(s).toFixed(2);
 const escHtml  = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-// Inject keyframes
 const _style = document.createElement("style");
 _style.textContent = `
   @keyframes shake {
-    0%,100% { transform:translateX(0)   }
-    20%      { transform:translateX(-8px) }
-    40%      { transform:translateX(8px)  }
-    60%      { transform:translateX(-5px) }
-    80%      { transform:translateX(5px)  }
+    0%,100%{transform:translateX(0)}   20%{transform:translateX(-8px)}
+    40%{transform:translateX(8px)}     60%{transform:translateX(-5px)}
+    80%{transform:translateX(5px)}
   }
   @keyframes fadeUp {
-    from { opacity:0; transform:translateY(10px) }
-    to   { opacity:1; transform:translateY(0)    }
+    from{opacity:0;transform:translateY(10px)}
+    to{opacity:1;transform:translateY(0)}
   }
 `;
 document.head.appendChild(_style);
-
-// ── Init ───────────────────────────────────────────
-injectApiKeyBanner();
