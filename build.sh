@@ -1,7 +1,6 @@
 #!/bin/bash
 # build.sh — Render build script
 set -e
-
 echo "Building SentimentAI..."
 
 if [ -z "$GROQ_API_KEY" ]; then
